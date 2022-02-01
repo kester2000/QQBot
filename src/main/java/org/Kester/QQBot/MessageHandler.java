@@ -74,7 +74,7 @@ public class MessageHandler {
             for (int i = 0; i < COMMANDS.length; i++) {
                 str += "场内命令" + (i + 1) + "：" + NAME + " " + COMMANDS[i] + "\n";
             }
-            str += "（注：若玩家数不足将自动补电脑）\n\n" // "\n\n" //
+            str += "\n\n" //
                     + "机器人作者：宽容 QQ：877367792\n" //
                     + "QQ群：jzj群 号码：1059834024\n";
             int x = 10, y = 100;

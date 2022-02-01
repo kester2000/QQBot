@@ -53,6 +53,7 @@ public class YTRQGame extends Game {
     @Override
     public void start() throws Exception {
         super.start();
+        round = 0;
         showInfo();
         round++;
         At at = new At(players.get(0).getId());
@@ -85,7 +86,8 @@ public class YTRQGame extends Game {
         if (senderId != players.get(1 - round % 2).getId())
             throw new Exception("不是你的回合");
 
-        System.arraycopy(board[round - 1], 0, board[round], 0, size * size);
+        for (int i = 0; i < size; i++)
+            System.arraycopy(board[round - 1][i], 0, board[round][i], 0, size);
 
         if (msg.length() == 2) {
             char c0 = msg.charAt(0);
@@ -119,6 +121,7 @@ public class YTRQGame extends Game {
                         board[round][i][j] = 1;
                     }
                     showInfo();
+                    round++;
                     return;
                 }
             }
