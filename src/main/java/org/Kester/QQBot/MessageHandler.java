@@ -96,7 +96,7 @@ public class MessageHandler {
                 e.printStackTrace();
             }
         }
-        ExternalResource externalResource=ExternalResource.create(file);
+        ExternalResource externalResource = ExternalResource.create(file);
         Message message = messageEvent.getSubject().uploadImage(externalResource);
         messageEvent.getSubject().sendMessage(message);
         externalResource.close();
@@ -141,7 +141,7 @@ public class MessageHandler {
                 MessageHandler.showRule(instance, messageEvent);
             } else if (msg.contains("init") || msg.contains("创建")) {
                 // 创建一个新的游戏
-                if (groupMessageEvent == null) throw new Exception("不能在私聊中创建游戏");
+                if (!isGroup) throw new Exception("不能在私聊中创建游戏");
                 for (Game g : gameList) {
                     if (msg.startsWith(g.getName()) && g.getGroupId() == groupMessageEvent.getGroup().getId())
                         throw new Exception("已经有存在的一局" + g.getName());
@@ -158,7 +158,7 @@ public class MessageHandler {
                 messageEvent.getSubject().sendMessage(game.getName() + "创建成功");
             } else {
                 for (Game game : gameList) {
-                    if (msg.startsWith(game.getName()) && game.getGroupId() == groupMessageEvent.getGroup().getId()) { // 如果本群已经有该游戏
+                    if (msg.startsWith(game.getName()) && game.getIndexById(senderId) != -1) { // 如果本群已经有该游戏
                         msg = msg.replaceFirst(game.getName(), "").trim();
                         if ((msg.startsWith("yes") || msg.startsWith("确认"))) {
                             if (!isGroup) throw new Exception("请在群聊中进行");

@@ -100,7 +100,7 @@ public abstract class Game implements Serializable {
 
     public void start() throws Exception {
         if (players.size() < minPlayer) throw new Exception("游戏人数不足");
-        if (players.size() > minPlayer) throw new Exception("代码bug，游戏人数过多");
+        if (players.size() > maxPlayer) throw new Exception("代码bug，游戏人数过多");
         state = STATE.PLAYING;
         for (int i = 0; i < players.size(); i++) {
             vis[i] = false;

@@ -113,6 +113,8 @@ public class TXWZGame extends Game {
     @Override
     public void doByEvent(MessageEvent messageEvent, String msg, long senderId, boolean isGroup) throws Exception {
         super.doByEvent(messageEvent, msg, senderId, isGroup);
+
+        if (isGroup) throw new Exception("请私聊");
         int id = getIndexById(senderId);
 
         msg = msg.replace(getName(), "").trim();
