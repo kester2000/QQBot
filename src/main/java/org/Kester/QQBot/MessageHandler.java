@@ -1,19 +1,24 @@
 package org.Kester.QQBot;
 
+import kotlin.Unit;
+import kotlinx.coroutines.Deferred;
 import net.mamoe.mirai.event.events.MessageEvent;
 import net.mamoe.mirai.event.events.GroupMessageEvent;
 import net.mamoe.mirai.message.data.At;
+import net.mamoe.mirai.message.data.Image;
 import net.mamoe.mirai.message.data.Message;
 import net.mamoe.mirai.message.data.MessageChain;
 import net.mamoe.mirai.utils.ExternalResource;
 import org.Kester.QQBot.Games.Game;
 import org.Kester.QQBot.Games.Player;
+import org.jetbrains.annotations.NotNull;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,7 +41,7 @@ public class MessageHandler {
         return gameList;
     }
 
-    public static void showRule(DeclaredElement instance, MessageEvent messageEvent) {
+    public static void showRule(DeclaredElement instance, MessageEvent messageEvent) throws IOException {
         String NAME = instance.CN;
         String RULE = instance.RULE;
         String[] COMMANDS = instance.COMMANDS;
@@ -91,9 +96,10 @@ public class MessageHandler {
                 e.printStackTrace();
             }
         }
-
-        Message message = messageEvent.getSubject().uploadImage(ExternalResource.create(file));
+        ExternalResource externalResource=ExternalResource.create(file);
+        Message message = messageEvent.getSubject().uploadImage(externalResource);
         messageEvent.getSubject().sendMessage(message);
+        externalResource.close();
     }
 
     public static void HandleMessageEvent(MessageEvent messageEvent) throws Exception {

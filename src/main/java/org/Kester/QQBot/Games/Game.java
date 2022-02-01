@@ -2,12 +2,14 @@ package org.Kester.QQBot.Games;
 
 import net.mamoe.mirai.contact.Group;
 import net.mamoe.mirai.event.events.MessageEvent;
+import net.mamoe.mirai.message.data.At;
 import net.mamoe.mirai.message.data.Message;
+import net.mamoe.mirai.message.data.MessageChain;
+import net.mamoe.mirai.message.data.MessageChainBuilder;
 import net.mamoe.mirai.utils.ExternalResource;
 import org.Kester.QQBot.CONSTANTS;
 import org.Kester.QQBot.MessageHandler;
 
-import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -54,7 +56,9 @@ public abstract class Game implements Serializable {
 
     protected int firstColWidth;
 
-    protected int round;
+    protected int round = 0;
+    protected int waitTime = 180;
+    protected boolean[] vis = new boolean[9999];
 
     //默认不高亮
     protected HighLightInterface myHighLight = param1 -> false;
@@ -71,7 +75,7 @@ public abstract class Game implements Serializable {
         if (player.getNickName().equals("")) throw new Exception("请输入昵称");
         for (Player p : players) {
             if (p.getId() == player.getId()) throw new Exception("你已经加入，添加失败");
-            if (Objects.equals(p.getNickName(),player.getNickName())) throw new Exception("昵称重复，添加失败");
+            if (Objects.equals(p.getNickName(), player.getNickName())) throw new Exception("昵称重复，添加失败");
         }
         for (Game g : MessageHandler.getGameList()) {
             if (this != g && this.getClass() == g.getClass()) {
@@ -98,12 +102,64 @@ public abstract class Game implements Serializable {
         if (players.size() < minPlayer) throw new Exception("游戏人数不足");
         if (players.size() > minPlayer) throw new Exception("代码bug，游戏人数过多");
         state = STATE.PLAYING;
+        for (int i = 0; i < players.size(); i++) {
+            vis[i] = false;
+        }
     }
 
     public void kill() {
         state = STATE.STOPPING;
         MessageHandler.getGameList().remove(this);
     }
+
+    protected void loop() throws IOException {
+        try {
+            sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        while (this.state == CONSTANTS.STATE.PLAYING) {
+            round++;
+            int t = 0;
+            while (this.state == CONSTANTS.STATE.PLAYING && t < waitTime) {
+                t++;
+                try {
+                    sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                boolean flag = true;
+                for (int i = 0; i < players.size(); i++) {
+                    if (!vis[i]) {
+                        flag = false;
+                        break;
+                    }
+                }
+                if (flag) break;
+                if (waitTime - t == 120 || waitTime - t == 60 || waitTime - t == 30 || waitTime - t == 15) {
+                    MessageChainBuilder builder = new MessageChainBuilder();
+                    for (int i = 0; i < players.size(); i++) {
+                        if (!vis[i]) {
+                            At at = new At(players.get(i).getId());
+                            builder.add(at);
+                        }
+                    }
+                    builder.add("仍未发送消息，" + (waitTime - t) + "秒后自动死亡");
+                    MessageChain messages = builder.build();
+                    group.sendMessage(messages);
+                }
+            }
+            for (int i = 1; i <= players.size(); i++) {
+                if (!vis[i]) autoDo(i);
+            }
+            cal();
+        }
+
+    }
+
+    protected abstract void autoDo(int i);
+
+    protected abstract void cal() throws IOException;
 
     public void doByEvent(MessageEvent messageEvent, String msg, long senderId, boolean isGroup) throws Exception {
         if (state != STATE.PLAYING) throw new Exception("游戏未开始");
@@ -114,7 +170,7 @@ public abstract class Game implements Serializable {
     /**
      * 自动使用预设参数
      */
-    public void showInfo() {
+    public void showInfo() throws IOException {
         showInfo(players.size() + 1, round + 1);
     }
 
@@ -122,14 +178,14 @@ public abstract class Game implements Serializable {
     /**
      * 设定行数和列树
      */
-    public void showInfo(int col, int row) {
+    public void showInfo(int col, int row) throws IOException {
         showInfo(col, row, myHighLight, myFirstColString);
     }
 
     /**
      * 设定行数和列树和高亮函数
      */
-    public void showInfo(int col, int row, HighLightInterface highLightInterface, FirstColString firstColString) {
+    public void showInfo(int col, int row, HighLightInterface highLightInterface, FirstColString firstColString) throws IOException {
         showInfo(info, col, row, width, height, gridMarginTop, gridMarginBottom, gridMarginLeft, gridMarginRight, firstColWidth, highLightInterface, firstColString);
     }
 
@@ -141,7 +197,7 @@ public abstract class Game implements Serializable {
      * firstColWidth为第一列宽度
      * func为定制高亮
      */
-    public void showInfo(String[][] info, int col, int row, int width, int height, int gridMarginTop, int gridMarginBottom, int gridMarginLeft, int gridMarginRight, int firstColWidth, CONSTANTS.HighLightInterface highLightInterface, FirstColString firstColString) {
+    public void showInfo(String[][] info, int col, int row, int width, int height, int gridMarginTop, int gridMarginBottom, int gridMarginLeft, int gridMarginRight, int firstColWidth, CONSTANTS.HighLightInterface highLightInterface, FirstColString firstColString) throws IOException {
         int imageWidth = width * col + firstColWidth + gridMarginLeft + gridMarginRight;
         int imageHeight = height * row + gridMarginTop + gridMarginBottom;
         BufferedImage image = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_RGB);
@@ -168,18 +224,15 @@ public abstract class Game implements Serializable {
             }
         }
 
-        if (!new File("TEMPS").exists()) {
-            new File("TEMPS").mkdirs();
-        }
-        File file = new File("TEMPS/" + name + group.getId() + ".png");
-        try {
-            ImageIO.write(image, "png", file);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        Message message = group.uploadImage(ExternalResource.create(file));
+        File file = writeImageToFile(image, "TEMPS", name + group.getId() + ".png");
+
+        ExternalResource externalResource = ExternalResource.create(file);
+        Message message = group.uploadImage(externalResource);
         group.sendMessage(message);
+        externalResource.close();
     }
+
+
 
     public long getGroupId() {
         return group.getId();
@@ -229,7 +282,7 @@ public abstract class Game implements Serializable {
 
     protected void timer() {
         int time = 0;
-        while (state == STATE.PREPARING && time < KILLGAMETIME) {
+        while (state == STATE.PREPARING && time < startTime) {
             try {
                 sleep(1000);
             } catch (InterruptedException e) {

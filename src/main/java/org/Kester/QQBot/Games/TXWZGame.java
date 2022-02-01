@@ -1,12 +1,11 @@
 package org.Kester.QQBot.Games;
 
 import net.mamoe.mirai.event.events.MessageEvent;
-import org.Kester.QQBot.CONSTANTS;
 
-import java.io.File;
+import java.io.IOException;
 import java.util.Objects;
 
-public class TXWZGame extends ImperfectInfoGame {
+public class TXWZGame extends Game {
 
     protected int[] health = new int[9999];
     protected String[] role = new String[9999];
@@ -48,6 +47,8 @@ public class TXWZGame extends ImperfectInfoGame {
         }
 
         showInfo(players.size(), 2);
+
+        loop();
     }
 
     @Override
@@ -59,7 +60,7 @@ public class TXWZGame extends ImperfectInfoGame {
     }
 
     @Override
-    protected void cal() {
+    protected void cal() throws IOException {
         boolean hasPolice = false;
         for (int i = 0; i < players.size(); i++) {
             if (Objects.equals(role[i], "警")) {

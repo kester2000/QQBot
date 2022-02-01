@@ -2,8 +2,14 @@ package org.Kester.QQBot;
 
 import org.Kester.QQBot.Games.Game;
 import org.Kester.QQBot.Games.TXWZGame;
+import org.Kester.QQBot.Games.YTRQGame;
 
 public enum DeclaredElement {
+
+    YTRQ("-犹太人棋", YTRQGame.class, "  犹太人棋游戏可供2人游戏\n" +
+            "  双方轮流给一个6*6的棋盘涂黑色，\n" +
+            "  一次可以只涂一格，也可以多格，已涂色的格子不能再涂，如果多格则必须是相连的横竖斜一条线上。谁涂完最后一格谁赢。\n" ,
+            "-犹太人棋 B6、A2C4 -> 在对应位置涂色，字母在前，大小写均可\n" ),
 
     TXWZ("-天下无贼", TXWZGame.class, "  每个人有10点生命，初始身份为民。\n" +
             "  总共有民、警、贼三种身份，每轮可以选择维持不变或变成别的身份，但是贼不能直接变警，警也不能直接变贼。\n" +
@@ -35,7 +41,6 @@ public enum DeclaredElement {
 //            + "【命中红心】\n完美命中x的值（四舍五入）将造成双倍伤害：\n" //
 //            + "【最终规则】\n若同时出现0和100，无视其他规则，本轮出0玩家出局：\n" //
 //            + "\n", "[数字] -> 提交本轮数字（不输入中括号）"),
-
     ;
 
     DeclaredElement(String cn, Class<? extends Game> clazz, String rule, String... COMMANDS) {
