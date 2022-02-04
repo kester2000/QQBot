@@ -131,16 +131,16 @@ public class MessageHandler {
                 msg = msg.replaceFirst(instance.CN, "").trim();
             else if (msg.toLowerCase().startsWith(instance.EN))
                 msg = msg.toLowerCase().replaceFirst(instance.EN, "").trim();
-            else return;
+            else throw new Exception("代码bug，游戏类型出错");
             GroupMessageEvent groupMessageEvent;
             try {
                 groupMessageEvent = (GroupMessageEvent) messageEvent;
             } catch (Exception e) {
                 groupMessageEvent = null;
             }
-            if (msg.contains("rule") || msg.contains("规则")) {
+            if (msg.startsWith("rule") || msg.startsWith("规则")) {
                 MessageHandler.showRule(instance, messageEvent);
-            } else if (msg.contains("init") || msg.contains("创建")) {
+            } else if (msg.startsWith("init") || msg.startsWith("创建")) {
                 // 创建一个新的游戏
                 if (!isGroup) throw new Exception("不能在私聊中创建游戏");
                 for (Game g : gameList) {
@@ -153,7 +153,7 @@ public class MessageHandler {
                 } catch (Exception e) {
                     game = null;
                 }
-                if (game == null) throw new Exception(game.getName() + "创建失败");
+                if (game == null) throw new Exception(instance.CN + "创建失败");
                 game.setGroup(groupMessageEvent.getGroup());
                 gameList.add(game);
                 messageEvent.getSubject().sendMessage(game.getName() + "创建成功");
