@@ -1,26 +1,21 @@
 package org.Kester.QQBot;
 
-import kotlin.Unit;
-import kotlinx.coroutines.Deferred;
 import net.mamoe.mirai.event.events.MessageEvent;
 import net.mamoe.mirai.event.events.GroupMessageEvent;
 import net.mamoe.mirai.message.data.At;
-import net.mamoe.mirai.message.data.Image;
 import net.mamoe.mirai.message.data.Message;
 import net.mamoe.mirai.message.data.MessageChain;
 import net.mamoe.mirai.utils.ExternalResource;
 import org.Kester.QQBot.Games.Game;
-import org.Kester.QQBot.Games.Player;
-import org.jetbrains.annotations.NotNull;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import static org.Kester.QQBot.CONSTANTS.*;
 
@@ -103,10 +98,11 @@ public class MessageHandler {
     }
 
     public static void HandleMessageEvent(MessageEvent messageEvent) throws Exception {
-        String msg = messageEvent.getMessage().contentToString();
+        String msg = messageEvent.getMessage().contentToString().trim();
         long senderId = messageEvent.getSender().getId();
         boolean isGroup = (messageEvent.getClass() == GroupMessageEvent.class);
         if (msg.startsWith("-test") || msg.startsWith("-测试")) {
+            if (!isGroup) throw new Exception("请在群里测试");
             msg = msg.replaceFirst("-test", "").replaceFirst("-测试", "").trim();
             if (msg.startsWith("g") || msg.startsWith("群")) {
                 msg = msg.replaceFirst("g", "").replaceFirst("群", "").trim();
@@ -129,8 +125,13 @@ public class MessageHandler {
                 str += "\n" + s1;
             messageEvent.getSubject().sendMessage(str);
         } else {
-            DeclaredElement instance = DeclaredElement.findEnumByAllName(msg.split("\\s")[0]);
+            DeclaredElement instance = DeclaredElement.findEnumByAllName(msg);
             if (instance == null) return;
+            if (msg.startsWith(instance.CN))
+                msg = msg.replaceFirst(instance.CN, "").trim();
+            else if (msg.toLowerCase().startsWith(instance.EN))
+                msg = msg.toLowerCase().replaceFirst(instance.EN, "").trim();
+            else return;
             GroupMessageEvent groupMessageEvent;
             try {
                 groupMessageEvent = (GroupMessageEvent) messageEvent;
@@ -158,8 +159,8 @@ public class MessageHandler {
                 messageEvent.getSubject().sendMessage(game.getName() + "创建成功");
             } else {
                 for (Game game : gameList) {
-                    if (msg.startsWith(game.getName()) && game.getIndexById(senderId) != -1) { // 如果本群已经有该游戏
-                        msg = msg.replaceFirst(game.getName(), "").trim();
+                    if (instance.CLAZZ == game.getClass() &&
+                            ((isGroup && groupMessageEvent.getGroup().getId() == game.getGroupId()) || game.getIndexById(senderId) != -1)) {
                         if ((msg.startsWith("yes") || msg.startsWith("确认"))) {
                             if (!isGroup) throw new Exception("请在群聊中进行");
                             if (!game.isKillingGame()) throw new Exception("请先发送停止命令");
@@ -172,10 +173,10 @@ public class MessageHandler {
                         } else if (msg.startsWith("in") || msg.startsWith("参加")) {
                             if (!isGroup) throw new Exception("请在群聊中进行");
                             String nickName = msg.replaceFirst("in", "").replace("参加", "").trim();
-                            game.addPlayer(new Player(senderId, nickName));
+                            game.addPlayer(senderId, nickName);
                             At at = new At(groupMessageEvent.getSender().getId());
                             MessageChain messages = at.plus("加入成功").plus("\n目前成员：");
-                            for (Player p : game.getPlayers()) {
+                            for (Game.Player p : game.getPlayers()) {
                                 messages = messages.plus(p.getNickName() + " ");
                             }
                             messageEvent.getSubject().sendMessage(messages);
@@ -184,7 +185,7 @@ public class MessageHandler {
                             game.deletePlayer(senderId);
                             At at = new At(groupMessageEvent.getSender().getId());
                             MessageChain messages = at.plus("退出成功").plus("\n目前成员：");
-                            for (Player p : game.getPlayers()) {
+                            for (Game.Player p : game.getPlayers()) {
                                 messages = messages.plus(p.getNickName() + " ");
                             }
                             messageEvent.getSubject().sendMessage(messages);

@@ -9,6 +9,8 @@ import net.mamoe.mirai.message.data.MessageChainBuilder;
 import net.mamoe.mirai.utils.ExternalResource;
 import org.Kester.QQBot.CONSTANTS;
 import org.Kester.QQBot.MessageHandler;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -18,6 +20,8 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static java.lang.Thread.sleep;
 import static org.Kester.QQBot.CONSTANTS.*;
@@ -25,15 +29,95 @@ import static org.Kester.QQBot.CONSTANTS.*;
 public abstract class Game implements Serializable {
 
 
+    public static class Player {
+        /**
+         * 游戏玩家类，存放玩家数据
+         * id为玩家QQ号，nickName为2-6位支持中英文(包括全角字符)、数字、下划线和减号，其中中文2位，其他1位
+         */
+        private long id;
+        private String nickName;
+        private boolean vis;
+
+        public Player(long id, String nickName) throws Exception {
+            this.id = id;
+            setNickName(nickName);
+            vis = false;
+        }
+
+        public long getId() {
+            return id;
+        }
+
+        public String getNickName() {
+            return nickName;
+        }
+
+        public void setId(long id) {
+            this.id = id;
+        }
+
+        /**
+         * 验证用户名，支持中英文(包括全角字符)、数字、下划线和减号 (全角及汉字算两位)
+         */
+
+        public boolean validateUserName(String userName) {
+            String validateStr = "^[\\w\\-－＿[０-９]\u4e00-\u9fa5\uFF21-\uFF3A\uFF41-\uFF5A]+$";
+            boolean rs = false;
+            rs = matcher(validateStr, userName);
+            return rs;
+        }
+
+        /**
+         * 获取字符串的长度，对双字符(包括汉字)按两位计数
+         */
+
+        public static int getStrLength(String value) {
+            int valueLength = 0;
+            String chinese = "[\u0391-\uFFE5]";
+            for (int i = 0; i < value.length(); i++) {
+                String temp = value.substring(i, i + 1);
+                if (temp.matches(chinese)) {
+                    valueLength += 2;
+                } else {
+                    valueLength += 1;
+                }
+            }
+            return valueLength;
+        }
+
+        private static boolean matcher(String reg, String string) {
+            boolean tem = false;
+            Pattern pattern = Pattern.compile(reg);
+            Matcher matcher = pattern.matcher(string);
+            tem = matcher.matches();
+            return tem;
+        }
+
+        public void setNickName(String nickName) throws Exception {
+            if (!validateUserName(nickName)) throw new Exception("不允许出现特殊字符");
+            if (getStrLength(nickName) < 2) throw new Exception("昵称过短");
+            if (getStrLength(nickName) > 6) throw new Exception("昵称过长");
+            this.nickName = nickName;
+        }
+
+        public boolean isVis() {
+            return vis;
+        }
+
+        public void setVis(boolean vis) {
+            this.vis = vis;
+        }
+    }
+
     /**
      * qunId为群号
      * state为当前状态
      * players为玩家列表
      * minPlayer 和 maxPlayer为最小最大人数
      */
-    protected static String name;
-    protected static int minPlayer;
-    protected static int maxPlayer;
+    protected String name;
+    protected int minPlayer;
+    protected int maxPlayer;
 
     protected Group group;
 
@@ -58,7 +142,6 @@ public abstract class Game implements Serializable {
 
     protected int round = 0;
     protected int waitTime = 180;
-    protected boolean[] vis = new boolean[9999];
 
     //默认不高亮
     protected HighLightInterface myHighLight = param1 -> false;
@@ -69,22 +152,27 @@ public abstract class Game implements Serializable {
         new Thread(this::timer).start();
     }
 
-    public void addPlayer(Player player) throws Exception {
+
+    public Player createPlayer(long id, String nickName) throws Exception {
+        return new Player(id, nickName);
+    }
+
+    public void addPlayer(long id, String nickName) throws Exception {
         if (state != STATE.PREPARING) throw new Exception("游戏已经开始，添加失败");
         if (players.size() == maxPlayer) throw new Exception("人数已满");
-        if (player.getNickName().equals("")) throw new Exception("请输入昵称");
+        if (nickName.equals("")) throw new Exception("请输入昵称");
         for (Player p : players) {
-            if (p.getId() == player.getId()) throw new Exception("你已经加入，添加失败");
-            if (Objects.equals(p.getNickName(), player.getNickName())) throw new Exception("昵称重复，添加失败");
+            if (p.getId() == id) throw new Exception("你已经加入，添加失败");
+            if (Objects.equals(p.getNickName(), nickName)) throw new Exception("昵称重复，添加失败");
         }
         for (Game g : MessageHandler.getGameList()) {
             if (this != g && this.getClass() == g.getClass()) {
                 for (Player p : g.players) {
-                    if (p.getId() == player.getId()) throw new Exception("你已经加入另一个同样的游戏，添加失败");
+                    if (p.getId() == id) throw new Exception("你已经加入另一个同样的游戏，添加失败");
                 }
             }
         }
-        players.add(player);
+        players.add(createPlayer(id, nickName));
     }
 
     public void deletePlayer(long id) throws Exception {
@@ -99,12 +187,10 @@ public abstract class Game implements Serializable {
     }
 
     public void start() throws Exception {
+        if (state != STATE.PREPARING) throw new Exception("游戏已经开始");
         if (players.size() < minPlayer) throw new Exception("游戏人数不足");
         if (players.size() > maxPlayer) throw new Exception("代码bug，游戏人数过多");
         state = STATE.PLAYING;
-        for (int i = 0; i < players.size(); i++) {
-            vis[i] = false;
-        }
     }
 
     public void kill() {
@@ -129,8 +215,8 @@ public abstract class Game implements Serializable {
                     e.printStackTrace();
                 }
                 boolean flag = true;
-                for (int i = 0; i < players.size(); i++) {
-                    if (!vis[i]) {
+                for (Player player : players) {
+                    if (!player.isVis()) {
                         flag = false;
                         break;
                     }
@@ -138,9 +224,9 @@ public abstract class Game implements Serializable {
                 if (flag) break;
                 if (waitTime - t == 120 || waitTime - t == 60 || waitTime - t == 30 || waitTime - t == 15) {
                     MessageChainBuilder builder = new MessageChainBuilder();
-                    for (int i = 0; i < players.size(); i++) {
-                        if (!vis[i]) {
-                            At at = new At(players.get(i).getId());
+                    for (Player player : players) {
+                        if (!player.isVis()) {
+                            At at = new At(player.getId());
                             builder.add(at);
                         }
                     }
@@ -149,8 +235,8 @@ public abstract class Game implements Serializable {
                     group.sendMessage(messages);
                 }
             }
-            for (int i = 1; i <= players.size(); i++) {
-                if (!vis[i]) autoDo(i);
+            for (int i = 0; i < players.size(); i++) {
+                if (!players.get(i).isVis()) autoDo(i);
             }
             cal();
         }
@@ -233,7 +319,6 @@ public abstract class Game implements Serializable {
     }
 
 
-
     public long getGroupId() {
         return group.getId();
     }
@@ -246,7 +331,7 @@ public abstract class Game implements Serializable {
         this.group = group;
     }
 
-    public static String getName() {
+    public String getName() {
         return "-" + name;
     }
 
@@ -289,10 +374,14 @@ public abstract class Game implements Serializable {
                 e.printStackTrace();
             }
             time++;
+            if (state == STATE.PREPARING && time == startTime - 30)
+                group.sendMessage("游戏长时间没开始，30s后，自动结束本群的" + getName());
+
         }
         if (state == STATE.PREPARING) {
             this.kill();
-            group.sendMessage("游戏长时间没开始，自动结束");
+            group.sendMessage("游戏长时间没开始，自动结束" + getName());
         }
     }
+
 }

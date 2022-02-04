@@ -3,23 +3,34 @@ package org.Kester.QQBot;
 import org.Kester.QQBot.Games.Game;
 import org.Kester.QQBot.Games.TXWZGame;
 import org.Kester.QQBot.Games.YTRQGame;
+import org.Kester.QQBot.Games.ZDQGame;
+
+import java.util.Locale;
 
 public enum DeclaredElement {
 
-    YTRQ("-犹太人棋", YTRQGame.class, "  犹太人棋游戏可供2人游戏\n" +
+    YTRQ("-犹太人棋", "-ytrq", YTRQGame.class, "  犹太人棋游戏可供2人游戏\n" +
             "  双方轮流给一个6*6的棋盘涂黑色，\n" +
-            "  一次可以只涂一格，也可以多格，已涂色的格子不能再涂，如果多格则必须是相连的横竖斜一条线上。谁涂完最后一格谁赢。\n" ,
-            "-犹太人棋 B6、A2C4 -> 在对应位置涂色，字母在前，大小写均可\n" ),
+            "  一次可以只涂一格，也可以多格，已涂色的格子不能再涂，如果多格则必须是相连的横竖斜一条线上。谁涂完最后一格谁赢。\n",
+            "B6、A2C4 -> 在对应位置涂色，字母在前，大小写均可\n"),
 
-    TXWZ("-天下无贼", TXWZGame.class, "  每个人有10点生命，初始身份为民。\n" +
+    ZDQ("-指定棋", "-zdq", ZDQGame.class, "每人6颗棋子，放在自己底线上，每回合移动一颗己方棋子之后，\n" +
+            "指定对方一颗棋子，下回合对方只能移动被指定的棋子。\n" +
+            "移动方式：竖向或斜向前进任意步数，不能横向或后退，不能越子。\n" +
+            "被指定的棋子必须有能移动的空间，否则不能被指定。\n" +
+            "胜利条件：一方一颗棋子到达对方底线直接获胜。当移动后无法指定对方任何棋子则直接失败。\n",
+            "3 -> 初始回合指定第一个走的棋子",
+            "B6 3 -> 走到B6，并且指定对方下个棋子为3"),
+
+    TXWZ("-天下无贼", "-txwz", TXWZGame.class, "  每个人有10点生命，初始身份为民。\n" +
             "  总共有民、警、贼三种身份，每轮可以选择维持不变或变成别的身份，但是贼不能直接变警，警也不能直接变贼。\n" +
             "  选择警的人，该回合必须选择一个要抓的人，如果该人是贼，贼淘汰，自己+1生命，如果该人不是贼，自己-2生命。\n" +
             "  选择贼的人，该回合必须要选择偷一个人，如果该人是警，自己淘汰，如果该人不是警，该人-2生命，自己+1生命。\n" +
             "  选择民的不需要操作，如果场上没有警，所有民额外-1生命。\n" +
             "  当游戏进行到只有两人时，生命值多的夺冠。如果两人同分，共同获胜。\n" +
             "  补充提示：每轮结束都公布大家的身份和操作，所以如果某人前一轮是贼的话，这一轮绝对不会变成警。\n\n",
-            "-天下无贼 民 -> 成为平民",
-            "-天下无贼 警/贼 [操作对象] -> 成为警/贼，并对操作对象进行操作")
+            "民 -> 成为平民",
+            "警/贼 [操作对象] -> 成为警/贼，并对操作对象进行操作")
 //    CZTB(CZTBGame.class, "游戏源于或改编于“45-差值法则”。\n" //
 //            + "双方初始每人30枚点数，每回合同时下分一定数量\n" //
 //            + "下分高的一方得1分，并支付双方本回合下分数额之差的点数（不给对方）\n" //
@@ -43,15 +54,16 @@ public enum DeclaredElement {
 //            + "\n", "[数字] -> 提交本轮数字（不输入中括号）"),
     ;
 
-    DeclaredElement(String cn, Class<? extends Game> clazz, String rule, String... COMMANDS) {
+    DeclaredElement(String cn, String en, Class<? extends Game> clazz, String rule, String... COMMANDS) {
         this.CN = cn;
+        this.EN = en;
         this.CLAZZ = clazz;
         this.RULE = rule;
         this.COMMANDS = COMMANDS;
     }
 
     public Class<? extends Game> CLAZZ;
-    public String CN, RULE;
+    public String CN, EN, RULE;
     public String[] COMMANDS;
 
 //    public static class CZTBGame extends Game {
@@ -66,9 +78,9 @@ public enum DeclaredElement {
 //
 //    }
 
-    public static DeclaredElement findEnumByAllName(String name) {
+    public static DeclaredElement findEnumByAllName(String msg) {
         for (DeclaredElement entity : DeclaredElement.values()) {
-            if (entity.CN.equalsIgnoreCase(name)) {
+            if (msg.startsWith(entity.CN) || msg.toLowerCase().startsWith(entity.EN)) {
                 return entity;
             }
         }

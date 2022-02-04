@@ -12,6 +12,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.Locale;
 
 import static org.Kester.QQBot.CONSTANTS.*;
 
@@ -66,7 +67,7 @@ public class YTRQGame extends Game {
         super.doByEvent(messageEvent, msg, senderId, isGroup);
         if (!isGroup) throw new Exception("请群聊");
 
-        msg = msg.replace(getName(), "").trim().toLowerCase();
+        msg = msg.replace(getName(), "").trim();
         if (msg.startsWith("back") || msg.startsWith("回退")) {
             msg = msg.replace("back", "").replace("回退", "").trim();
             int a;
@@ -89,6 +90,7 @@ public class YTRQGame extends Game {
         for (int i = 0; i < size; i++)
             System.arraycopy(board[round - 1][i], 0, board[round][i], 0, size);
 
+        msg=msg.toLowerCase();
         if (msg.length() == 2) {
             char c0 = msg.charAt(0);
             char c1 = msg.charAt(1);
@@ -149,9 +151,9 @@ public class YTRQGame extends Game {
         for (int i = 0; i < size; i++)
             for (int j = 0; j < size; j++) {
                 if (board[round][i][j] == 1) {
-                    graphics.fillRect(gridMarginLeft + i * width, gridMarginTop + j * width, width, height);
+                    graphics.fillRect(gridMarginLeft + i * width, gridMarginTop + j * height, width, height);
                 } else {
-                    graphics.drawRect(gridMarginLeft + i * width, gridMarginTop + j * width, width, height);
+                    graphics.drawRect(gridMarginLeft + i * width, gridMarginTop + j * height, width, height);
                 }
             }
 

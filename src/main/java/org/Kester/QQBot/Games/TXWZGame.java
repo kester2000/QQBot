@@ -7,9 +7,50 @@ import java.util.Objects;
 
 public class TXWZGame extends Game {
 
-    protected int[] health = new int[9999];
-    protected String[] role = new String[9999];
-    protected String[] target = new String[9999];
+    private final class TXWZPlayer extends Player {
+        private int health;
+        private String role;
+        private String target;
+
+        public TXWZPlayer(long id, String nickName) throws Exception {
+            super(id, nickName);
+            health = 10;
+            role = "";
+            target = "";
+        }
+
+        public int getHealth() {
+            return health;
+        }
+
+        public void setHealth(int health) {
+            this.health = health;
+        }
+
+        public void addHealth(int add) {
+            this.health += add;
+        }
+
+        public String getRole() {
+            return role;
+        }
+
+        public void setRole(String role) {
+            this.role = role;
+        }
+
+        public String getTarget() {
+            return target;
+        }
+
+        public void setTarget(String target) {
+            this.target = target;
+        }
+    }
+
+//    protected int[] health = new int[9999];
+//    protected String[] role = new String[9999];
+//    protected String[] target = new String[9999];
 
     public TXWZGame() {
         super();
@@ -35,15 +76,17 @@ public class TXWZGame extends Game {
     }
 
     @Override
+    public Player createPlayer(long id, String nickName) throws Exception {
+        return new TXWZPlayer(id, nickName);
+    }
+
+    @Override
     public void start() throws Exception {
         super.start();
 
         for (int i = 0; i < players.size(); i++) {
             info[0][i] = players.get(i).getNickName();
             info[1][i] = String.valueOf(10);
-            health[i] = 10;
-            role[i] = "";
-            target[i] = "";
         }
 
         showInfo(players.size(), 2);
@@ -53,50 +96,56 @@ public class TXWZGame extends Game {
 
     @Override
     protected void autoDo(int i) {
-        vis[i] = true;
-        health[i] = -9999;
-        role[i] = "";
-        target[i] = "";
+        TXWZPlayer txwzPlayer = (TXWZPlayer) players.get(i);
+        txwzPlayer.setVis(true);
+        txwzPlayer.setHealth(-9999);
+        txwzPlayer.setRole("");
+        txwzPlayer.setTarget("");
     }
 
     @Override
     protected void cal() throws IOException {
         boolean hasPolice = false;
-        for (int i = 0; i < players.size(); i++) {
-            if (Objects.equals(role[i], "警")) {
+        for (Player player : players) {
+            TXWZPlayer txwzPlayer = (TXWZPlayer) player;
+            if (Objects.equals(txwzPlayer.getRole(), "警")) {
                 hasPolice = true;
                 break;
             }
         }
-        for (int i = 0; i < players.size(); i++) {
-            if (Objects.equals(role[i], "民")) {
-                if (!hasPolice) health[i]--;
-            } else if (Objects.equals(role[i], "警")) {
-                int id = getIndexByNickName(target[i]);
-                if (Objects.equals(role[id], "贼")) {
-                    health[i]++;
-                    health[id] -= 9999;
-                } else health[i] -= 2;
-            } else if (Objects.equals(role[i], "贼")) {
-                int id = getIndexByNickName(target[i]);
-                if (!Objects.equals(role[id], "警")) {
-                    health[i]++;
-                    health[id] -= 2;
-                } else health[i] -= 9999;
+        for (Player player : players) {
+            TXWZPlayer txwzPlayer = (TXWZPlayer) player;
+            if (Objects.equals(txwzPlayer.getRole(), "民")) {
+                if (!hasPolice) txwzPlayer.addHealth(-1);
+            } else if (Objects.equals(txwzPlayer.getRole(), "警")) {
+                int id = getIndexByNickName(txwzPlayer.getTarget());
+                TXWZPlayer targetTXWZPlayer = (TXWZPlayer) players.get(id);
+                if (Objects.equals(targetTXWZPlayer.getRole(), "贼")) {
+                    txwzPlayer.addHealth(1);
+                    targetTXWZPlayer.addHealth(-9999);
+                } else txwzPlayer.addHealth(-2);
+            } else if (Objects.equals(txwzPlayer.getRole(), "贼")) {
+                int id = getIndexByNickName(txwzPlayer.getTarget());
+                TXWZPlayer targetTXWZPlayer = (TXWZPlayer) players.get(id);
+                if (!Objects.equals(targetTXWZPlayer.getRole(), "警")) {
+                    txwzPlayer.addHealth(1);
+                    targetTXWZPlayer.addHealth(-2);
+                } else txwzPlayer.addHealth(-9999);
             }
         }
 
         int cnt = 0;
-        for (int i = 0; i < players.size(); i++) {
-            if (health[i] < 0) health[i] = 0;
-            if (health[i] > 0) cnt++;
+        for (Player player : players) {
+            TXWZPlayer txwzPlayer = (TXWZPlayer) player;
+            if (txwzPlayer.getHealth() < 0) txwzPlayer.setHealth(0);
+            if (txwzPlayer.getHealth() > 0) cnt++;
         }
 
-
         for (int i = 0; i < players.size(); i++) {
-            info[3 * round - 1][i] = role[i];
-            info[3 * round][i] = target[i];
-            info[3 * round + 1][i] = String.valueOf(health[i]);
+            TXWZPlayer txwzPlayer = (TXWZPlayer) players.get(i);
+            info[3 * round - 1][i] = txwzPlayer.getRole();
+            info[3 * round][i] = txwzPlayer.getTarget();
+            info[3 * round + 1][i] = String.valueOf(txwzPlayer.getHealth());
         }
 
         showInfo(players.size(), round * 3 + 2);
@@ -105,8 +154,9 @@ public class TXWZGame extends Game {
             kill();
         }
 
-        for (int i = 0; i < players.size(); i++) {
-            if (health[i] > 0) vis[i] = false;
+        for (Player player : players) {
+            TXWZPlayer txwzPlayer = (TXWZPlayer) player;
+            if (txwzPlayer.getHealth() > 0) txwzPlayer.setVis(false);
         }
     }
 
@@ -119,35 +169,36 @@ public class TXWZGame extends Game {
 
         msg = msg.replace(getName(), "").trim();
 
-        if (health[id] <= 0) throw new Exception("你已经死亡");
-        if (vis[id]) throw new Exception("你已经进行过本回合操作");
+        TXWZPlayer txwzPlayer = (TXWZPlayer) players.get(id);
+        if (txwzPlayer.getHealth() <= 0) throw new Exception("你已经死亡");
+        if (txwzPlayer.isVis()) throw new Exception("你已经进行过本回合操作");
 
         if (msg.startsWith("民")) {
-            role[id] = "民";
-            target[id] = "";
-            vis[id] = true;
+            txwzPlayer.setRole("民");
+            txwzPlayer.setTarget("");
+            txwzPlayer.setVis(true);
             messageEvent.getSubject().sendMessage("成为民，成功");
         } else if (msg.startsWith("警")) {
-            if (Objects.equals(role[id], "贼")) throw new Exception("你不能从贼变成警");
+            if (Objects.equals(txwzPlayer.getRole(), "贼")) throw new Exception("你不能从贼变成警");
             msg = msg.replaceFirst("警", "").trim();
             int id2 = getIndexByNickName(msg);
             if (id2 == -1) throw new Exception("找不到你的目标对象");
             if (id2 == id) throw new Exception("目标不能是自己");
-            if (health[id2] <= 0) throw new Exception("目标对象已死亡");
-            role[id] = "警";
-            target[id] = msg;
-            vis[id] = true;
+            if (((TXWZPlayer) players.get(id2)).getHealth() <= 0) throw new Exception("目标对象已死亡");
+            txwzPlayer.setRole("警");
+            txwzPlayer.setTarget(msg);
+            txwzPlayer.setVis(true);
             messageEvent.getSubject().sendMessage("成为警，抓" + msg + "，成功");
         } else if (msg.startsWith("贼")) {
-            if (Objects.equals(role[id], "警")) throw new Exception("你不能从警变成贼");
+            if (Objects.equals(txwzPlayer.getRole(), "警")) throw new Exception("你不能从警变成贼");
             msg = msg.replaceFirst("贼", "").trim();
             int id2 = getIndexByNickName(msg);
             if (id2 == -1) throw new Exception("找不到你的目标对象");
             if (id2 == id) throw new Exception("目标不能是自己");
-            if (health[id2] <= 0) throw new Exception("目标对象已死亡");
-            role[id] = "贼";
-            target[id] = msg;
-            vis[id] = true;
+            if (((TXWZPlayer) players.get(id2)).getHealth() <= 0) throw new Exception("目标对象已死亡");
+            txwzPlayer.setRole("贼");
+            txwzPlayer.setTarget(msg);
+            txwzPlayer.setVis(true);
             messageEvent.getSubject().sendMessage("成为贼，偷" + msg + "，成功");
         } else {
             messageEvent.getSubject().sendMessage("未知命令");
